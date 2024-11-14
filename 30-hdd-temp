@@ -26,5 +26,6 @@ for i in {a..z}; do
     fi
 done
 out+="\n"
+echo
 echo -e "HDD Temps:"
 printf "$out" | column -c $k -ts $',' | sed -e 's/^/ /'

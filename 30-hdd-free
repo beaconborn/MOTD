@@ -1,15 +1,21 @@
 #!/bin/bash
 
-mountpoints=('/dev/sdf1' '/dev/vg1/downloads' '/dev/sdb1')
-barWidth=34
-maxDiscUsage=90
+# mountpoints=$(echo df -h | grep ^/dev/ | grep -v efi | awk '{print $1;}')
+mapfile -t mountpoints < <( df -h | grep ^/dev/ | grep -v efi | awk '{print $1;}' )
+
+IFS=$'\n' mountpoints=($(sort <<<"${mountpoints[*]}"))
+unset IFS
+
+barWidth=38
+maxDiscUsage=85
 clear="\e[39m\e[0m"
 dim="\e[2m"
 barclear=""
 echo
 echo 'HDD free:'
 for point in "${mountpoints[@]}"; do
-    line=$(df -hl "${point}")
+    line=$(df -h "${point}")
+    # IFS=" " read fs size used avail use mount $(df -h "${point}")
 	label=$(lsblk -o label "${point}")
     usagePercent=$(echo "$line"|tail -n1|awk '{print $5;}'|sed 's/%//')
     usedBarWidth=$((($usagePercent*$barWidth)/100))
@@ -26,8 +32,8 @@ for point in "${mountpoints[@]}"; do
     for sep in $(seq 1 $(($barWidth-$usedBarWidth))); do
         barContent="${barContent}-"
     done
-    bar="[${barContent}${clear}]"
-	echo "${label}" | awk '{if ($1 != "LABEL") printf("%-10s", $1); }'
+    bar="  [${barContent}${clear}]"
+	echo "${point}" | awk '{printf("  %-14s", $1); }'
 	echo "${line}" | awk  '{if ($1 != "Filesystem") printf("%+8s used out of %+5s\n", $3, $2); }'
 	echo -e "${bar}"
 

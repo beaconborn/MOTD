@@ -2,32 +2,90 @@
 
 export LANG='en_US.UTF-8'
 # set column width
-COLUMNS=2
+COLUMNS=1
 # colors
 green="\e[1;32m"
 red="\e[1;31m"
+yellow="\e[1;33m"
 undim="\e[0m"
 
-mapfile -t containers < <( docker ps --format "{{.Names}} {{.Status}}" -a | awk '{ print $1,$2 }' | sed '/^\s*$/d' | tail -n +1)
+# docker ps --format "{{.Names}} \t {{.Status}}" --filter "label=game_server" -a
+# comm -2 -3 <(docker ps -a  --format "{{.Names}} \t {{.Status}}" | sort) <(docker ps -a  --format "{{.Names}} \t {{.Status}}" --filter='label=game_server' | sort)
 
-IFS=$'\n' containers=($(sort <<<"${containers[*]}"))
-unset IFS
+mapfile -t containers < <( comm -2 -3 <(docker ps -a  --format "{{.Names}} {{.Status}}" | sort) <(docker ps -a  --format "{{.Names}} {{.Status}}" --filter='label=game_server' | sort) | sed '/^\s*$/d' | tail -n +1)
+mapfile -t game_servers < <( docker ps --format "{{.Names}} {{.Status}}" --filter "label=game_server" -a | sed '/^\s*$/d' | tail -n +1 )
 
-out=""
-for i in "${!containers[@]}"; do
-    IFS=" " read name status <<< ${containers[i]}
-    # color green if service is active, else red
-    if [[ "${status}" == "Up" ]]; then
-        out+="${name}:,${green}▲${undim},"
-    else
-        out+="${name}:,${red}▼${undim},"
-    fi
-    # insert \n every $COLUMNS column
-    if [ $((($i+1) % $COLUMNS)) -eq 0 ]; then
-        out+="\n"
-    fi
-done
-out+="\n"
+
+#IFS=$'\n' containers=($(sort <<<"${containers[*]}"))
+#unset IFS
+
+#IFS2=$'\n' game_servers=($(sort <<<"${game_servers[*]}"))
+#unset IFS2
 
 printf "\nDocker status:\n"
-printf "$out" | column -ts $',' | sed -e 's/^/ /'
+printf " Game Servers:\n"
+for i in "${!game_servers[@]}"; do
+    IFS2=" " read name status <<< ${game_servers[i]}
+    replica=$( echo ${name} | sed 's/\([^.]*\)\.\([^.]*\)\.\([^.]*\)/\2/')
+    name=$( echo ${name} | sed 's/\([^.]*\)\.\([^.]*\)\.\([^.]*\)/\1/')
+
+#    printf "ttt \\\ ${status}"
+
+    if   [[ "${status}" == *"healthy"* ]]; then
+        _status="${green}healthy${undim}"
+
+    elif [[ "${status}" == *"Restarting"* ]]; then
+        _status="${yellow}restarting${undim}"
+
+    elif [[ "${status}" == *"Paused"* ]]; then
+        _status="${yellow}paused${undim}"
+
+    elif [[ "${status}" == *"Up"* ]]; then
+        _status="${green}up${undim}"
+
+    elif [[ "${status}" == *"Created"* ]]; then
+        _status="${yellow}created${undim}"
+
+    elif [[ "${status}" == *"Exited"* ]]; then
+
+        _status="${red}exited${undim}"
+    fi
+
+    line=${name},${_status}
+    echo -e "${name}  ${_status}" | awk '{printf("  %-20s %+25s\n", $1, $2); }'
+done
+
+printf "\n Other:\n"
+
+for i in "${!containers[@]}"; do
+    IFS=" " read name status <<< ${containers[i]}
+    replica=$( echo ${name} | sed 's/\([^.]*\)\.\([^.]*\)\.\([^.]*\)/\2/')
+    name=$( echo ${name} | sed 's/\([^.]*\)\.\([^.]*\)\.\([^.]*\)/\1/')
+
+
+    if   [[ "${status}" == *"healthy"* ]]; then
+        _status="${green}healthy${undim}"
+
+    elif [[ "${status}" == *"Restarting"* ]]; then
+        _status="${yellow}restarting${undim}"
+
+    elif [[ "${status}" == *"Paused"* ]]; then
+        _status="${yellow}paused${undim}"
+
+    elif [[ "${status}" == *"Up"* ]]; then
+        _status="${green}up${undim}"
+
+    elif [[ "${status}" == *"Created"* ]]; then
+        _status="${yellow}created${undim}"
+
+    elif [[ "${status}" == *"Exited"* ]]; then
+
+        _status="${red}exited${undim}"
+    fi
+    line=${name},${_status}
+    echo -e "${name}  ${_status}" | awk '{printf("  %-20s %+25s\n", $1, $2); }'
+    # if [ $((($i+1) % $COLUMNS)) -eq 0 ]; then
+    #     out+="\n"
+    # fi
+done
+echo -e ""
