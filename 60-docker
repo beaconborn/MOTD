@@ -9,27 +9,19 @@ red="\e[1;31m"
 yellow="\e[1;33m"
 undim="\e[0m"
 
-# docker ps --format "{{.Names}} \t {{.Status}}" --filter "label=game_server" -a
-# comm -2 -3 <(docker ps -a  --format "{{.Names}} \t {{.Status}}" | sort) <(docker ps -a  --format "{{.Names}} \t {{.Status}}" --filter='label=game_server' | sort)
-
-mapfile -t containers < <( comm -2 -3 <(docker ps -a  --format "{{.Names}} {{.Status}}" | sort) <(docker ps -a  --format "{{.Names}} {{.Status}}" --filter='label=game_server' | sort) | sed '/^\s*$/d' | tail -n +1)
-mapfile -t game_servers < <( docker ps --format "{{.Names}} {{.Status}}" --filter "label=game_server" -a | sed '/^\s*$/d' | tail -n +1 )
+docker_format='docker ps --format "{{.Names}} {{.Status}}" -a'
+game_label='eval "$docker_format" --filter "label=game_server" -a | sort'
 
 
-#IFS=$'\n' containers=($(sort <<<"${containers[*]}"))
-#unset IFS
+mapfile -t containers < <( comm -2 -3 <( eval "$docker_format" | sort) <(eval "$game_label") | sed '/^\s*$/d' | tail -n +1)
+mapfile -t game_servers < <( eval "$game_label"  | sed '/^\s*$/d'| tail -n +1)
 
-#IFS2=$'\n' game_servers=($(sort <<<"${game_servers[*]}"))
-#unset IFS2
 
-printf "\nDocker status:\n"
-printf " Game Servers:\n"
+printf "\nDocker status:\n Game Servers:\n"
 for i in "${!game_servers[@]}"; do
     IFS2=" " read name status <<< ${game_servers[i]}
     replica=$( echo ${name} | sed 's/\([^.]*\)\.\([^.]*\)\.\([^.]*\)/\2/')
     name=$( echo ${name} | sed 's/\([^.]*\)\.\([^.]*\)\.\([^.]*\)/\1/')
-
-#    printf "ttt \\\ ${status}"
 
     if   [[ "${status}" == *"healthy"* ]]; then
         _status="${green}healthy${undim}"
@@ -84,8 +76,7 @@ for i in "${!containers[@]}"; do
     fi
     line=${name},${_status}
     echo -e "${name}  ${_status}" | awk '{printf("  %-20s %+25s\n", $1, $2); }'
-    # if [ $((($i+1) % $COLUMNS)) -eq 0 ]; then
-    #     out+="\n"
-    # fi
+
 done
-echo -e ""
+printf ""
+
