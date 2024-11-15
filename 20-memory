@@ -1,8 +1,8 @@
 #!/bin/bash
 
-mapfile -t mem < <( free --mega)
+mapfile -t mem < <( free --mega | tail -n +2)
 
-IFS=$'\n' mem=($(sort <<<"${mem[*]}" | tail -n +2))
+IFS=$'\n' mem=($(sort <<<"${mem[*]}"))
 unset IFS
 
 barWidth=38
