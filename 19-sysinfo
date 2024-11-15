@@ -1,0 +1,28 @@
+#!/bin/bash
+
+# get processor name
+cpu_info=$(cat /proc/cpuinfo)
+cpu_model="$(echo "$cpu_info" | grep "model name" | sort -u | cut -d ':' -f 2)"
+cpu_model=$(echo "$cpu_model" | sed -e "s/(R)//g" -e "s/(TM)//g" -e "s/ CPU//" -e "s/ Processor//" -e "s/  / /" -e "s/^ //g")
+cpu_model=$(echo "$cpu_model" | sed "s/ with Radeon Graphics//")
+cpu_model=$(echo "$cpu_model" | cut -d '@' -f 1)
+
+
+distro=$(cat /etc/*release | grep "PRETTY_NAME" | cut -d "=" -f 2- | sed 's/"//g')
+_uptime=$(uptime -p | awk '{printf("%s %s %s %s\n", $2, $3, $4, $5); }' | sed 's/,//g')
+# get processes
+PROCESS=`ps -eo user=|sort|uniq -c | awk '{ print $2 " " $1 }'`
+PROCESS_ALL=`echo "$PROCESS"| awk {'print $2'} | awk '{ SUM += $1} END { print SUM }'`
+PROCESS_ROOT=`echo "$PROCESS"| grep root | awk {'print $2'}`
+PROCESS_USER=`echo "$PROCESS"| grep -v root | awk {'print $2'} | awk '{ SUM += $1} END { print SUM }'`
+
+W="\e[0;39m"
+G="\e[1;33m"
+
+printf "\n${W}System info:\n"
+printf "$W  Uptime.: $_uptime\n"
+printf "$W  Distro.: $distro\n"
+printf "$W  Kernel.: `uname -sr`\n"
+printf "$W  Proc...: $G$PROCESS_ROOT$W (r), $G$PROCESS_USER$W (u) | $G$PROCESS_ALL$W (t)\n"
+printf "$W  CPU....: %s\n" "$cpu_model"
+ 

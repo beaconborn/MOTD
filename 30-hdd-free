@@ -1,12 +1,10 @@
 #!/bin/bash
 
-# mountpoints=$(echo df -h | grep ^/dev/ | grep -v efi | awk '{print $1;}')
 mapfile -t mountpoints < <( df -h | grep ^/dev/ | grep -v efi | awk '{print $6;}' )
-
 IFS=$'\n' mountpoints=($(sort <<<"${mountpoints[*]}"))
 unset IFS
 
-barWidth=40
+barWidth=38
 maxDiscUsage=85
 midDiscUsage=45
 clear="\e[39m\e[0m"
@@ -30,14 +28,14 @@ for point in "${mountpoints[@]}"; do
     fi
     barContent="${color}"
     for sep in $(seq 1 $usedBarWidth); do
-        barContent="${barContent}▄"
+        barContent="${barContent}―"
     done
-    barContent="${barContent}${clear}${dim}"
+    barContent="${barContent}${clear}"
     for sep in $(seq 1 $(($barWidth-$usedBarWidth))); do
-        barContent="${barContent}▄"
+        barContent="${barContent}―"
     done
     bar="  ${barContent}${clear}"
-	echo "${point}" | awk '{printf("  %-14s", $1); }'
+	echo "${point}" | awk '{printf("  %-12s", $1); }'
 	echo "${line}" | awk  '{if ($1 != "Filesystem") printf("%+8s used out of %+5s\n", $3, $2); }'
 	echo -e "${bar}"
 

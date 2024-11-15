@@ -9,35 +9,41 @@ red="\e[1;31m"
 undim="\e[0m"
 declare -A services
 services["docker"]="Docker"
-#services["openvpn-server@server"]="OVPN server"
-#services["openvpn-server@private"]="OVPN private"
-services["smbd"]="Samba"
 services["smartd"]="Smart"
-# services["minecraft@iis"]="MC IIS"
-# services["minecraft@iis_creative"]="IIS CREATIVE"
-#services["lavalink"]="Lavalink"
-#services["discord-music"]="Dis music"
-#services["discord-pisya"]="Dis pisya"
-#services["discord-boom"]="Dis boom"
+services["smbd"]="Samba"
+services["nmbd"]="NetBIOS"
 services["wsdd"]="WSD"
-# sort services
+services["isc-dhcp-relay"]="DHCP Relay"
+
+
+# Sorting associated array
+names=$(
+for name in ${!services[@]}; do
+  echo "${services[$name]}:::$name"
+done | sort | awk -F::: '{print $2}'
+)
+
 k=0
 out=""
-for i in "${!services[@]}"; do
-	((k++))
+for name in $names; do
+  VAL=${services[$name]}
+  ((k++))
     # color green if service is active, else red
-    service_status=($(systemctl is-active "$i"))
+    service_status=($(systemctl is-active "$name"))
     if [[ "${service_status}" == "active" ]]; then
-        out+="${services[$i]}:,${green}  up${undim},"
+        _tmp=$(printf "%-13s %-16s," "${services[$name]}:" "${green}up${undim}")
+        out+="${_tmp},"
     else
-        out+="${services[$i]}:,${red}down${undim},"
+        _tmp=$(printf "%-13s %-16s," "${services[$name]}:" "${red}down${undim}")
+        out+="${_tmp},"
     fi
     # insert \n every $COLUMNS column
     if [ $((($k) % $COLUMNS)) -eq 0 ]; then
         out+="\n"
     fi
 done
+
 out+="\n"
 
-printf "\nservices:\n"
+printf "\nServices:\n"
 printf "$out" | column -ts $',' | sed -e 's/^/  /'

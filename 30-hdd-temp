@@ -1,16 +1,16 @@
 #!/bin/bash
-disks=${disks:-()}
+
+mapfile -t disks < <( ls /dev/sd[a-z] )
 out=""
 dim="\e[43m"
-white="\e[31m"
 label="\e[1;30m"
 COLUMNS=3
 clear="\e[0m\e[39m"
 my_target_temp=45
-k=0
 
-for i in {a..z}; do
-    temp=$(smartctl -a /dev/sd${i} | grep Temperature_Celsius | grep 194     | awk '{print $10}' 2> /dev/null)
+k=0
+for i in ${disks[@]}; do
+    temp=$(smartctl -a ${i} | grep Temperature_Celsius | grep 194     | awk '{print $10}' 2> /dev/null)
     color="\e[42m"
 	((k++))
 	if [ -z "$temp" ]; then
@@ -19,13 +19,13 @@ for i in {a..z}; do
         if [ "$temp" -ge "${my_target_temp}" ]; then
             color="\e[41m"
         fi
-        out+="${dim}${white}${label} sd${i} \e[30m$color $temp $clear,"
+
+        out+="$(printf "${dim}${label} %s \e[30m$color %-17s," "$(echo ${i} | sed -e 's/\/dev\///')" "$temp $clear")"
 		if [ $(($k % $COLUMNS)) -eq 0 ]; then
                     out+="\n"
             fi
     fi
 done
 out+="\n"
-echo
-echo -e "HDD Temps:"
-printf "$out" | column -c $k -ts $',' | sed -e 's/^/ /'
+printf "\n HDD Temps:\n"
+printf "$out" | column -c $k -ts $',' | sed -e 's/^/  /'

@@ -1,0 +1,38 @@
+#!/bin/bash
+
+mapfile -t mem < <( free --mega)
+
+IFS=$'\n' mem=($(sort <<<"${mem[*]}" | tail -n +2))
+unset IFS
+
+barWidth=38
+clear="\e[39m\e[0m"
+usageColor="\e[33m"
+buffColor="\e[36m"
+
+printf '\nMemory:\n'
+
+for point in "${mem[@]}"; do
+    # printf "$point"
+    IFS=" " read TYPE USED TOTAL CACHE <<<$(echo "${point}" | awk {'print $1,$3,$2,$6'} | sed 's/://')
+    CACHE=$((CACHE+0))
+    usedBarWidth=$((barWidth*USED/TOTAL))
+    cachedBarWidth=$((barWidth*CACHE/TOTAL))
+    barContent="${usageColor}"
+    for sep in $(seq 1 $usedBarWidth); do
+        barContent="${barContent}―"
+    done
+    barContent="${barContent}${buffColor}"
+    for sep in $(seq 1 $cachedBarWidth); do
+        barContent="${barContent}―"
+    done
+    barContent="${barContent}${clear}"
+    for sep in $(seq 1 $(($barWidth-$usedBarWidth-$cachedBarWidth))); do
+        barContent="${barContent}―"
+    done
+    bar="${barContent}${clear}"
+    printf "  %-4s used ${usageColor}%2s${clear} Gi cache ${buffColor}%3s${clear} Gi of %3s Gi\n" "$TYPE" "$(($USED/1024))" "$(($CACHE/1024))"  "$(($TOTAL/1024))"
+
+	echo -e "  ${bar}"
+
+done
