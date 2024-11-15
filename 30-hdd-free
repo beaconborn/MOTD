@@ -1,38 +1,42 @@
 #!/bin/bash
 
 # mountpoints=$(echo df -h | grep ^/dev/ | grep -v efi | awk '{print $1;}')
-mapfile -t mountpoints < <( df -h | grep ^/dev/ | grep -v efi | awk '{print $1;}' )
+mapfile -t mountpoints < <( df -h | grep ^/dev/ | grep -v efi | awk '{print $6;}' )
 
 IFS=$'\n' mountpoints=($(sort <<<"${mountpoints[*]}"))
 unset IFS
 
-barWidth=38
+barWidth=40
 maxDiscUsage=85
+midDiscUsage=45
 clear="\e[39m\e[0m"
-dim="\e[2m"
+ok="\e[32m"
+alert="\e[33m"
+warn="\e[31m"
 barclear=""
 echo
 echo 'HDD free:'
 for point in "${mountpoints[@]}"; do
     line=$(df -h "${point}")
     # IFS=" " read fs size used avail use mount $(df -h "${point}")
-	label=$(lsblk -o label "${point}")
     usagePercent=$(echo "$line"|tail -n1|awk '{print $5;}'|sed 's/%//')
     usedBarWidth=$((($usagePercent*$barWidth)/100))
     barContent=""
-    color="\e[33m"
+    color="${ok}"
     if [ "${usagePercent}" -ge "${maxDiscUsage}" ]; then
-        color="\e[31m"
+        color="${warn}"
+    elif [ "${usagePercent}" -ge "${midDiscUsage}" ]; then
+        color="${alert}"
     fi
     barContent="${color}"
     for sep in $(seq 1 $usedBarWidth); do
-        barContent="${barContent}|"
+        barContent="${barContent}▄"
     done
     barContent="${barContent}${clear}${dim}"
     for sep in $(seq 1 $(($barWidth-$usedBarWidth))); do
-        barContent="${barContent}-"
+        barContent="${barContent}▄"
     done
-    bar="  [${barContent}${clear}]"
+    bar="  ${barContent}${clear}"
 	echo "${point}" | awk '{printf("  %-14s", $1); }'
 	echo "${line}" | awk  '{if ($1 != "Filesystem") printf("%+8s used out of %+5s\n", $3, $2); }'
 	echo -e "${bar}"
