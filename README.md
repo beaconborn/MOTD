@@ -17,7 +17,8 @@ It just Messange Of The Day for linux ssh and terminal.
    - Needed for working module 60-lxd
  * ssed
    - Needed for working module 70-vpn-active
-
+ * zramctl
+   - Needed for working module 21-zram
 
 # Screenshot
 ![screen](screenshot/screen.png)
@@ -33,6 +34,10 @@ sudo chown root:root *
 sudo cp * /etc/update-motd.d/
 sudo update-motd
 ```
+
+# Update 23.02.2026
+* Added modules for show zram, hdd io, hdd hours info
+
 
 # Update 08.09.2021
 * Added module for track Openvpn keys (i use easyrsa for generating keys) and active connections 
