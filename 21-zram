@@ -1,0 +1,62 @@
+#!/bin/bash
+
+# Читаем данные из zramctl [cite: 1]
+mapfile -t mem < <( zramctl -b | tail -n +2)
+
+IFS=$'\n' mem=($(sort <<<"${mem[*]}"))
+unset IFS
+
+barWidth=38
+clear="\e[39m\e[0m"
+usageColor="\e[33m"
+
+printf '\nZram:\n'
+
+for point in "${mem[@]}"; do
+    # Читаем устройство, алгоритм, размер, данные и общий сжатый объем
+    IFS=" " read -r DEV_PATH ALGO SIZE DATA TOTAL <<<$(echo "${point}" | awk {'print $1,$2,$3,$4,$6'})
+    
+    DEV_NAME="${DEV_PATH##*/}" # Оставляем только zram0
+    
+    # Расчеты в GiB с точностью 1 знак
+    usedGi=$(awk "BEGIN {printf \"%.1f\", $DATA/1024/1024/1024}")
+    totalGi=$(awk "BEGIN {printf \"%.1f\", $SIZE/1024/1024/1024}")
+    ratio=$(awk "BEGIN {if ($TOTAL>0) printf \"%.2f\", $DATA/$TOTAL; else print \"1.00\"}")
+
+    # Расчет полоски (38 символов) [cite: 1, 4, 5]
+    usedBarWidth=$((barWidth*DATA/SIZE))
+    barContent="${usageColor}"
+    for ((i=0; i<usedBarWidth; i++)); do barContent="${barContent}―"; done
+    barContent="${barContent}${clear}"
+    for ((i=0; i<(barWidth-usedBarWidth); i++)); do barContent="${barContent}―"; done
+    bar="${barContent}${clear}"
+
+    # --- ИДЕАЛЬНОЕ ВЫРАВНИВАНИЕ ---
+
+    # Строка 1: "zram0" слева, остальное справа.
+    # Считаем длину правой части без цветовых кодов:
+    # "used " (5) + usedGi (например "3.6" = 3) + " Gi of " (7) + totalGi ("125.0" = 5) + " Gi" (3) = 23
+    right_text="used ${usedGi} Gi of ${totalGi} Gi"
+    right_len=${#right_text}
+
+    # Считаем, сколько нужно пробелов между "zram0" (7 симв) и текстом, чтобы в сумме было 38
+    # 38 - 7 (имя) - длина текста
+    padding_len=$((38 - 7 - right_len))
+    padding=""
+    for ((i=0; i<padding_len; i++)); do padding="${padding} "; done
+
+    # Вывод первой строки: 2 пробела + имя + пробелы + текст (с цветом внутри)
+    printf "  %-7s%sused ${usageColor}%s${clear} Gi of %s Gi\n" "$DEV_NAME" "$padding" "$usedGi" "$totalGi"
+
+    # Строка 2: Ratio и Algo. Считаем длину, чтобы прижать вправо.
+    info_text="Ratio: ${ratio}  Algo: ${ALGO}"
+    info_len=${#info_text}
+    info_padding_len=$((38 - info_len))
+    info_padding=""
+    for ((i=0; i<info_padding_len; i++)); do info_padding="${info_padding} "; done
+
+    printf "  %s%s\n" "$info_padding" "$info_text"
+
+    # Линия (2 пробела + 38 символов)
+    echo -e "  ${bar}"
+done

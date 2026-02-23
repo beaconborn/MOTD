@@ -31,10 +31,10 @@ for name in $names; do
     # color green if service is active, else red
     service_status=($(systemctl is-active "$name"))
     if [[ "${service_status}" == "active" ]]; then
-        _tmp=$(printf "%-13s %-16s," "${services[$name]}:" "${green}up${undim}")
+        _tmp=$(printf "%-13s %-16s," "${services[$name]}:" "${green}${undim}")
         out+="${_tmp},"
     else
-        _tmp=$(printf "%-13s %-16s," "${services[$name]}:" "${red}down${undim}")
+        _tmp=$(printf "%-13s %-16s," "${services[$name]}:" "${red}${undim}")
         out+="${_tmp},"
     fi
     # insert \n every $COLUMNS column

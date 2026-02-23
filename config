@@ -1,0 +1,12 @@
+Width=40
+
+
+#Colors
+White="\e[39m"
+clear="\e[m"
+GREEN="\e[32m"
+undim="\e[0m"
+RED="\e[31m"
+YELLOW="\e[33m"
+BLUE="\e[36m"
+barclear=""

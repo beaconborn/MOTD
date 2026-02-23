@@ -1,0 +1,48 @@
+#!/bin/bash
+
+if ! command -v iostat &> /dev/null; then exit 0; fi
+
+mapfile -t disks < <( ls /dev/sd[a-z] )
+out=""
+dim="\e[43m"
+label="\e[1;30m"
+clear="\e[0m\e[39m"
+COLUMNS=3
+
+# Берем актуальный %util (вторая итерация iostat)
+declare -A utils
+while read -r dev util; do
+    utils[$dev]=$util
+done < <(iostat -dx 1 2 | awk '
+    BEGIN { col=0 }
+    /%util/ { for(i=1;i<=NF;i++) if($i=="%util") col=i }
+    col > 0 && $1 ~ /sd[a-z]$/ { data[$1]=$col }
+    END { for(d in data) print d, data[d] }
+')
+
+k=0
+printf "\n HDD I/O Load:\n"
+
+for i in "${disks[@]}"; do
+    dev_name=$(basename "$i")
+    util="${utils[$dev_name]:-0}"
+    util_int=$(printf "%.0f" "$util" 2>/dev/null || echo 0)
+    
+    ((k++))
+    
+    color="\e[42m" 
+    [ "$util_int" -ge 60 ] && color="\e[41m"
+    [ "$util_int" -lt 60 ] && [ "$util_int" -ge 30 ] && color="\e[43m"
+
+    # ФИКСИРОВАННАЯ ШИРИНА:
+    # %-4s (имя) + %4s (процент) + пробелы внутри тегов.
+    # Это сделает все плитки одинаковыми.
+    out+="$(printf "${dim}${label} %-3s ${clear}${color}\e[30m %3s%% ${clear}," "$dev_name" "$util_int")"
+    
+    if [ $(($k % $COLUMNS)) -eq 0 ]; then
+        out+="\n"
+    fi
+done
+
+# Выводим с разделителем в 2 пробела между колонками
+echo -e "$out" | column -ts $',' -o '  ' | sed -e 's/^/  /'

@@ -1,0 +1,28 @@
+#!/bin/bash
+
+mapfile -t disks < <( ls /dev/sd[a-z] )
+out=""
+printf "\nHDD Power On Hours:\n"
+
+for i in ${disks[@]}; do
+    model=$(smartctl -a ${i} | grep "^Device Model:" | awk -F ':' '{print $2}' | xargs 2>/dev/null)
+    # Получаем «чистые» часы 
+    hours=$(smartctl -a ${i} | grep "^  9" | awk '{print $10}' | awk -F 'h' '{print $1}' 2>/dev/null)
+    
+    if [ -n "$hours" ]; then
+        # Расчеты: 1 год = 8760ч, 1 месяц = 730ч, 1 день = 24ч
+        y=$((hours / 8760))
+        m=$(((hours % 8760) / 730))
+        d=$(((hours % 730) / 24))
+        
+        time_str=""
+        [ $y -gt 0 ] && time_str+="${y}y "
+        [ $m -gt 0 ] && time_str+="${m}m "
+        [ $d -gt 0 ] && time_str+="${d}d"
+        [ -z "$time_str" ] && time_str="${hours}h"
+
+        out+="  $model...$time_str\n"
+    fi
+done
+
+printf "$out" | column -ts '...'
